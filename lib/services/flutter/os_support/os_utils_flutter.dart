@@ -27,6 +27,7 @@ class OsUtilsFlutter {
       args,
       workingDirectory: workingDirectory,
       runInShell: true,
+      environment: {'TERM': 'xterm-256color'},
     );
 
     final stdoutSub = process.stdout

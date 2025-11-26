@@ -14,4 +14,18 @@ class TerminalCmd {
       onComplete: (_) => onComplete(),
     );
   }
+
+  static Future<CommandSubscription> projectRunStream({
+    required String parentDir,
+    required Function(String) onLog,
+    required Function() onComplete,
+  }) async {
+    return OsUtilsFlutter.streamCommand(
+      command: "flutter",
+      args: ["run", "-d", "chrome"],
+      workingDirectory: parentDir,
+      onLine: onLog,
+      onComplete: (_) => onComplete(),
+    );
+  }
 }

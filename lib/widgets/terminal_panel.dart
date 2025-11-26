@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:laravelide/widgets/terminal/terminal_cmd_debug.dart';
 import 'package:laravelide/widgets/terminal/terminal_cmd_problem.dart';
 import 'package:laravelide/widgets/terminal/terminal_cmd_terminal.dart';
 
@@ -150,7 +151,7 @@ class _TerminalPanelState extends State<TerminalPanel> {
       case 0:
         return TerminalCmdProblem(projectPath: widget.projectPath);
       case 1:
-        return Container(alignment: Alignment.topLeft, child: Text("1"));
+        return TerminalCmdDebug(projectPath: widget.projectPath);
       case 2:
         return TerminalCmdTerminal(projectPath: widget.projectPath);
       default:
