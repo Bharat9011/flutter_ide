@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:laravelide/widgets/terminal/terminal_cmd_debug.dart';
+import 'package:laravelide/widgets/terminal/terminal_cmd_output.dart';
 import 'package:laravelide/widgets/terminal/terminal_cmd_problem.dart';
 import 'package:laravelide/widgets/terminal/terminal_cmd_terminal.dart';
 
@@ -15,8 +16,14 @@ class TerminalPanel extends StatefulWidget {
 class _TerminalPanelState extends State<TerminalPanel> {
   int terminalIndex = 0;
 
-  bool isHoverProblem = false, isHoverDebug = false, isHoverTerminal = false;
-  bool isSelectProblem = true, isSelectDebug = false, isSelectTerminal = false;
+  bool isHoverProblem = false,
+      isHoverDebug = false,
+      isHoverTerminal = false,
+      isHoverOutput = false;
+  bool isSelectProblem = true,
+      isSelectDebug = false,
+      isSelectTerminal = false,
+      isSelectOutput = false;
 
   @override
   Widget build(BuildContext context) {
@@ -38,6 +45,7 @@ class _TerminalPanelState extends State<TerminalPanel> {
                   child: InkWell(
                     onTap: () => setState(() {
                       terminalIndex = 0;
+                      isSelectOutput = false;
                       isSelectProblem = true;
                       isSelectDebug = false;
                       isSelectTerminal = false;
@@ -76,6 +84,7 @@ class _TerminalPanelState extends State<TerminalPanel> {
                       setState(() {
                         terminalIndex = 1;
                         isSelectDebug = true;
+                        isSelectOutput = false;
                         isSelectProblem = false;
                         isSelectTerminal = false;
                       });
@@ -104,6 +113,46 @@ class _TerminalPanelState extends State<TerminalPanel> {
                 SizedBox(width: 10),
                 MouseRegion(
                   onEnter: (_) => setState(() {
+                    isHoverOutput = true;
+                  }),
+                  onExit: (_) => setState(() {
+                    isHoverOutput = false;
+                  }),
+                  child: InkWell(
+                    onTap: () {
+                      setState(() {
+                        terminalIndex = 2;
+                        isSelectOutput = true;
+                        isSelectDebug = false;
+                        isSelectProblem = false;
+                        isSelectTerminal = false;
+                      });
+                    },
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: isSelectOutput
+                            ? Colors.lightBlue
+                            : isHoverOutput
+                            ? Colors.lightBlue
+                            : Colors.black,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.all(10.0),
+                      child: Text(
+                        "Output",
+                        style: isSelectOutput
+                            ? textStyleBlack()
+                            : isHoverOutput
+                            ? textStyleBlack()
+                            : textStylewhite(),
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 10),
+
+                MouseRegion(
+                  onEnter: (_) => setState(() {
                     isHoverTerminal = true;
                   }),
                   onExit: (_) => setState(() {
@@ -111,9 +160,10 @@ class _TerminalPanelState extends State<TerminalPanel> {
                   }),
                   child: InkWell(
                     onTap: () => setState(() {
-                      terminalIndex = 2;
+                      terminalIndex = 3;
                       isSelectTerminal = true;
                       isSelectDebug = false;
+                      isSelectOutput = false;
                       isSelectProblem = false;
                     }),
                     child: Container(
@@ -153,6 +203,8 @@ class _TerminalPanelState extends State<TerminalPanel> {
       case 1:
         return TerminalCmdDebug(projectPath: widget.projectPath);
       case 2:
+        return TerminalCmdOutput(projectPath: widget.projectPath);
+      case 3:
         return TerminalCmdTerminal(projectPath: widget.projectPath);
       default:
         return TerminalCmdProblem(projectPath: widget.projectPath);
