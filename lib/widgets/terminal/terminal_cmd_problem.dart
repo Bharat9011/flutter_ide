@@ -154,62 +154,66 @@ class _TerminalCmdProblemState extends State<TerminalCmdProblem> {
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
-        child: _groupedKeysSnapshot.isEmpty
-            ? Center(
-                child: Text(
-                  _isLoading ? 'Analyzing project...' : 'No problems found',
-                  style: const TextStyle(color: Colors.white70, fontSize: 16),
-                ),
-              )
-            : ListView.builder(
-                itemCount: _groupedKeysSnapshot.length,
-                itemBuilder: (context, index) {
-                  final file = _groupedKeysSnapshot[index];
-                  final filenameParts = file.split('/');
-                  final fileIssues = _groupedIssues[file] ?? [];
+        child: ListView.builder(
+          itemCount: _groupedKeysSnapshot.length,
+          itemBuilder: (context, index) {
+            final file = _groupedKeysSnapshot[index];
+            final filenameParts = file.split('/');
+            final fileIssues = _groupedIssues[file] ?? [];
 
-                  return Theme(
-                    data: Theme.of(
-                      context,
-                    ).copyWith(dividerColor: Colors.grey.shade800),
-                    child: ExpansionTile(
-                      collapsedIconColor: Colors.white70,
-                      initiallyExpanded: true,
-                      iconColor: Colors.white,
-                      title: Text(
-                        filenameParts.isNotEmpty ? filenameParts.last : file,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                        ),
+            if (_groupedKeysSnapshot.isEmpty) {
+              return Expanded(
+                child: Center(
+                  child: Text(
+                    'No problems found',
+                    style: const TextStyle(color: Colors.white70, fontSize: 16),
+                  ),
+                ),
+              );
+            }
+
+            return Theme(
+              data: Theme.of(
+                context,
+              ).copyWith(dividerColor: Colors.grey.shade800),
+              child: ExpansionTile(
+                collapsedIconColor: Colors.white70,
+                initiallyExpanded: true,
+                iconColor: Colors.white,
+                title: Text(
+                  filenameParts.isNotEmpty ? filenameParts.last : file,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                children: fileIssues.map((issue) {
+                  return ListTile(
+                    leading: Icon(
+                      _getTypeIcon(issue.type),
+                      color: _getTypeColor(issue.type),
+                    ),
+                    title: Text(
+                      issue.message,
+                      style: TextStyle(
+                        color: _getTypeColor(issue.type),
+                        fontSize: 14,
                       ),
-                      children: fileIssues.map((issue) {
-                        return ListTile(
-                          leading: Icon(
-                            _getTypeIcon(issue.type),
-                            color: _getTypeColor(issue.type),
-                          ),
-                          title: Text(
-                            issue.message,
-                            style: TextStyle(
-                              color: _getTypeColor(issue.type),
-                              fontSize: 14,
-                            ),
-                          ),
-                          subtitle: Text(
-                            'Line ${issue.line}, Column ${issue.column}',
-                            style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 12,
-                            ),
-                          ),
-                        );
-                      }).toList(),
+                    ),
+                    subtitle: Text(
+                      'Line ${issue.line}, Column ${issue.column}',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                      ),
                     ),
                   );
-                },
+                }).toList(),
               ),
+            );
+          },
+        ),
       ),
     );
   }

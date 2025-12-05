@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:laravelide/services/flutter/terminal_cmd.dart';
-// import 'package:laravelide/widgets/terminal/debug_view.dart'; // Replaced with direct view for demo
-import 'package:xterm/ui.dart';
 
 class TerminalLogStore {
   static final List<String> logs = [];
@@ -28,15 +26,12 @@ class _TerminalCmdDebugState extends State<TerminalCmdDebug> {
     });
   }
 
-  // --- NEW: ANSI Parsing Logic (The VS Code Way) ---
   List<TextSpan> _buildSpans(String text) {
-    // FIXED: Removed 'r' to allow \u001b to be read as the ESC character
     final ansiPattern = RegExp('\u001b\\[([\\d;]+)m');
 
     final spans = <TextSpan>[];
     int lastIndex = 0;
 
-    // Default style
     TextStyle currentStyle = const TextStyle(
       color: Color(0xFFCCCCCC),
       fontFamily: 'monospace',
@@ -44,7 +39,6 @@ class _TerminalCmdDebugState extends State<TerminalCmdDebug> {
     );
 
     for (final match in ansiPattern.allMatches(text)) {
-      // 1. Add text before the code
       if (match.start > lastIndex) {
         spans.add(
           TextSpan(
@@ -54,10 +48,8 @@ class _TerminalCmdDebugState extends State<TerminalCmdDebug> {
         );
       }
 
-      // 2. Process the color code
       final codeString = match.group(1);
       if (codeString != null) {
-        // Handle composite codes like "1;31" (Bold Red)
         final codes = codeString.split(';').map(int.tryParse);
         for (final code in codes) {
           if (code != null) {
@@ -69,7 +61,6 @@ class _TerminalCmdDebugState extends State<TerminalCmdDebug> {
       lastIndex = match.end;
     }
 
-    // 3. Add remaining text
     if (lastIndex < text.length) {
       spans.add(TextSpan(text: text.substring(lastIndex), style: currentStyle));
     }
@@ -77,41 +68,54 @@ class _TerminalCmdDebugState extends State<TerminalCmdDebug> {
     return spans;
   }
 
-  // Helper: Maps ANSI numbers to Flutter Colors
   TextStyle _applyAnsiCode(TextStyle style, int code) {
     switch (code) {
       case 0:
-        return style.copyWith(color: const Color(0xFFCCCCCC)); // Reset
+        return style.copyWith(color: const Color(0xFFCCCCCC));
       case 30:
         return style.copyWith(color: Colors.black);
       case 31:
-        return style.copyWith(color: Colors.redAccent); // Red (Error)
+        return style.copyWith(color: Colors.redAccent);
       case 32:
-        return style.copyWith(color: Colors.greenAccent); // Green (Success)
+        return style.copyWith(color: Colors.greenAccent);
       case 33:
-        return style.copyWith(color: Colors.yellowAccent); // Yellow (Warning)
+        return style.copyWith(color: Colors.yellowAccent);
       case 34:
-        return style.copyWith(color: Colors.blueAccent); // Blue
+        return style.copyWith(color: Colors.blueAccent);
       case 35:
-        return style.copyWith(color: Colors.purpleAccent); // Magenta
+        return style.copyWith(color: Colors.purpleAccent);
       case 36:
-        return style.copyWith(color: Colors.cyanAccent); // Cyan
+        return style.copyWith(color: Colors.cyanAccent);
       case 37:
         return style.copyWith(color: Colors.white);
       case 90:
-        return style.copyWith(color: Colors.grey); // Bright Black
+        return style.copyWith(color: Colors.grey);
       default:
         return style;
     }
   }
 
   void _runProject() {
-    // Optional: Clear previous logs on new run
     TerminalLogStore.clear();
+
+    final unwantedPatterns = [
+      "Flutter run key commands.",
+      "r Hot reload.",
+      "R Hot restart.",
+      "h List all available interactive commands.",
+      "d Detach (terminate",
+      "c Clear the screen",
+      "q Quit (terminate",
+    ];
 
     TerminalCmd.projectRunStream(
       parentDir: widget.projectPath,
       onLog: (line) {
+        // Remove flutter instruction lines
+        if (unwantedPatterns.any((p) => line.trim().startsWith(p))) {
+          return;
+        }
+
         TerminalLogStore.add(line);
         if (mounted) setState(() {});
         _safeScrollToEnd();
@@ -123,7 +127,7 @@ class _TerminalCmdDebugState extends State<TerminalCmdDebug> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1E1E1E), // VS Code Dark Theme background
+      backgroundColor: const Color(0xFF1E1E1E),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -135,13 +139,11 @@ class _TerminalCmdDebugState extends State<TerminalCmdDebug> {
             ),
           ),
           Expanded(
-            // We use ListView.builder for performance with large logs
             child: ListView.builder(
               controller: _controller,
               padding: const EdgeInsets.all(8),
               itemCount: TerminalLogStore.logs.length,
               itemBuilder: (context, index) {
-                // Here we apply the new parser
                 return SelectableText.rich(
                   TextSpan(children: _buildSpans(TerminalLogStore.logs[index])),
                 );

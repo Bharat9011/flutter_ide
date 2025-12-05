@@ -28,4 +28,19 @@ class TerminalCmd {
       onComplete: (_) => onComplete(),
     );
   }
+
+  static Future<CommandSubscription> addDependencyStream({
+    required String dependencyName,
+    required String parentDir,
+    required Function(String) onLog,
+    required Function() onComplete,
+  }) async {
+    return OsUtilsFlutter.streamCommand(
+      command: "flutter",
+      args: ["pub", "add", dependencyName],
+      workingDirectory: parentDir,
+      onLine: onLog,
+      onComplete: (_) => onComplete(),
+    );
+  }
 }
