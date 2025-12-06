@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:laravelide/GetProvider/is_completed_getx_provider.dart';
+import 'package:laravelide/GetProvider/new_project_getx_provider.dart';
+import 'package:laravelide/services/flutter/create_project_utils.dart';
 import 'package:laravelide/services/flutter/terminal_cmd.dart';
-import 'package:laravelide/widgets/terminal/terminal_cmd_debug.dart';
 
 class TerminalOutputLogStore {
   static final List<String> logs = [];
@@ -20,20 +23,61 @@ class TerminalCmdOutput extends StatefulWidget {
 class _TerminalCmdOutputState extends State<TerminalCmdOutput> {
   final ScrollController _controller = ScrollController();
 
-  void _runProject() {
-    TerminalOutputLogStore.clear();
+  void _createProject() {
+    var newProjectController = Get.put(NewProjectGetxProvider());
 
-    TerminalCmd.addDependencyStream(
-      dependencyName: "flutter_easyloading",
-      parentDir: widget.projectPath,
-      onLog: (line) {
-        TerminalOutputLogStore.add(line);
-        if (mounted) setState(() {});
-        _safeScrollToEnd();
-      },
-      onComplete: () {},
-    );
+    if (newProjectController.isCreated.value) {
+      if (newProjectController.isCreated.value) {
+        if (newProjectController.platform.value == "Flutter") {
+          if (newProjectController.projectType.value == "Flutter App") {
+            CreateProjectUtils.createProjectStream(
+              parentDir: newProjectController.path.value,
+              projectName: newProjectController.name.value,
+              onLog: (line) {
+                TerminalOutputLogStore.add(line);
+                if (mounted) setState(() {});
+                _safeScrollToEnd();
+              },
+              onComplete: () {
+                var checkCompleted = Get.put(IsCompletedGetxProvider());
+
+                checkCompleted.setCompleted(true);
+              },
+            );
+          }
+          if (newProjectController.projectType.value == "Flutter Module") {}
+          if (newProjectController.projectType.value == "Flutter Plugin") {}
+          if (newProjectController.projectType.value == "Flutter Package") {}
+          if (newProjectController.projectType.value == "Flutter Skeleton") {}
+        }
+        if (newProjectController.platform.value == "Dart") {
+          if (newProjectController.projectType.value == "Dart Console App") {}
+          if (newProjectController.projectType.value == "Dart Package") {}
+          if (newProjectController.projectType.value ==
+              "Dart Server (shelf)") {}
+          if (newProjectController.projectType.value == "Dart Web App") {}
+          if (newProjectController.projectType.value == "Dart CLI") {}
+        }
+      }
+    }
+
+    newProjectController.markCreated(false);
   }
+
+  // void _runProject() {
+  //   TerminalOutputLogStore.clear();
+
+  //   TerminalCmd.addDependencyStream(
+  //     dependencyName: "flutter_easyloading",
+  //     parentDir: widget.projectPath,
+  //     onLog: (line) {
+  //       TerminalOutputLogStore.add(line);
+  //       if (mounted) setState(() {});
+  //       _safeScrollToEnd();
+  //     },
+  //     onComplete: () {},
+  //   );
+  // }
 
   void _safeScrollToEnd() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -42,6 +86,12 @@ class _TerminalCmdOutputState extends State<TerminalCmdOutput> {
         _controller.jumpTo(_controller.position.maxScrollExtent);
       } catch (_) {}
     });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _createProject();
   }
 
   List<TextSpan> _buildSpans(String text) {
@@ -78,31 +128,21 @@ class _TerminalCmdOutputState extends State<TerminalCmdOutput> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(8),
-            child: ElevatedButton(
-              onPressed: _runProject,
-              child: const Text("Run Project"),
-            ),
-          ),
-          Expanded(
-            child: ListView.builder(
-              controller: _controller,
-              padding: const EdgeInsets.all(8),
-              itemCount: TerminalOutputLogStore.logs.length,
-              itemBuilder: (context, index) {
-                return SelectableText.rich(
-                  TextSpan(
-                    children: _buildSpans(TerminalOutputLogStore.logs[index]),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
+      body: Container(
+        color: Colors.black,
+        child: ListView.builder(
+          controller: _controller,
+          padding: const EdgeInsets.all(8),
+          shrinkWrap: true,
+          itemCount: TerminalOutputLogStore.logs.length,
+          itemBuilder: (context, index) {
+            return SelectableText.rich(
+              TextSpan(
+                children: _buildSpans(TerminalOutputLogStore.logs[index]),
+              ),
+            );
+          },
+        ),
       ),
     );
   }

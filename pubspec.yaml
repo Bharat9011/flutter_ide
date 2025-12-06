@@ -46,6 +46,8 @@ dependencies:
   google_fonts: ^6.3.2
   xterm: ^4.0.0
   flutter_monaco: ^1.1.1
+  get: ^4.7.3
+  watcher: ^1.1.4
 
 dev_dependencies:
   flutter_test:

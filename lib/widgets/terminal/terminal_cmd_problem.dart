@@ -156,6 +156,7 @@ class _TerminalCmdProblemState extends State<TerminalCmdProblem> {
       body: SafeArea(
         child: ListView.builder(
           itemCount: _groupedKeysSnapshot.length,
+          shrinkWrap: true,
           itemBuilder: (context, index) {
             final file = _groupedKeysSnapshot[index];
             final filenameParts = file.split('/');

@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
+import 'package:get/instance_manager.dart';
+import 'package:laravelide/GetProvider/new_project_getx_provider.dart';
 import 'package:laravelide/db/data_base_handler.dart';
 import 'package:laravelide/screens/project_screen.dart';
 import 'package:laravelide/widgets/dialog/project_dialog.dart';
@@ -49,6 +51,12 @@ class _ProjectScreenState extends State<HomeScreen> {
       List<String> projectNameSplit = folderPath.toString().split("\\");
       String projectName = projectNameSplit[projectNameSplit.length - 1];
 
+      var newProjectController = Get.put(NewProjectGetxProvider());
+
+      newProjectController.setName(projectName);
+      newProjectController.setPath(folderPath.toString());
+      newProjectController.markCreated(true);
+
       await DataBaseHandler.instance.insertUser(
         ProjectModel(
           name: projectName,
@@ -60,15 +68,7 @@ class _ProjectScreenState extends State<HomeScreen> {
       if (mounted) {
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (context) => ProjectScreen(
-              projectModel: ProjectModel(
-                name: projectName,
-                path: folderPath.toString(),
-                isCreated: "false",
-              ),
-            ),
-          ),
+          MaterialPageRoute(builder: (context) => ProjectScreen()),
         );
       }
     }
@@ -274,11 +274,6 @@ class _ProjectScreenState extends State<HomeScreen> {
                               ?.copyWith(fontWeight: FontWeight.w600),
                         ),
                         const Spacer(),
-                        // IconButton.outlined(
-                        //   onPressed: pickFolder,
-                        //   icon: const Icon(Icons.notifications_outlined),
-                        //   tooltip: 'Notifications',
-                        // ),
                         FilledButton.icon(
                           onPressed: pickFolder,
                           icon: const Icon(Icons.folder_open_rounded),
@@ -486,62 +481,6 @@ class _ProjectScreenState extends State<HomeScreen> {
     );
   }
 
-  // Widget _buildProjectList() {
-  //   return Column(
-  //     children: projectList
-  //         .map(
-  //           (project) => Card(
-  //             margin: const EdgeInsets.only(bottom: 16),
-  //             child: ListTile(
-  //               leading: const Icon(Icons.folder),
-  //               title: Text(project.name),
-  //               subtitle: Text(project.path),
-  //               trailing: IconButton(
-  //                 onPressed: () {
-  //                   PopupMenuButton(
-  //                     onSelected: (index) {},
-  //                     itemBuilder: (context) => [
-  //                       PopupMenuItem(
-  //                         value: 1,
-  //                         child: Row(
-  //                           children: const [
-  //                             Icon(Icons.edit_outlined, color: Colors.blue),
-  //                             SizedBox(width: 10),
-  //                             Text("Edit"),
-  //                           ],
-  //                         ),
-  //                       ),
-  //                       PopupMenuItem(
-  //                         value: 2,
-  //                         child: Row(
-  //                           children: const [
-  //                             Icon(Icons.delete_outline, color: Colors.red),
-  //                             SizedBox(width: 10),
-  //                             Text("Delete"),
-  //                           ],
-  //                         ),
-  //                       ),
-  //                     ],
-  //                   );
-  //                 },
-  //                 icon: Icon(Icons.more_vert),
-  //               ),
-  //               //  Icon(Icons.arrow_forward),
-  //               onTap: () {
-  //                 Navigator.push(
-  //                   context,
-  //                   MaterialPageRoute(
-  //                     builder: (context) => HomeScreen(projectModel: project),
-  //                   ),
-  //                 );
-  //               },
-  //             ),
-  //           ),
-  //         )
-  //         .toList(),
-  //   );
-  // }
-
   Widget _buildProjectList() {
     return Column(
       children: projectList
@@ -595,12 +534,18 @@ class _ProjectScreenState extends State<HomeScreen> {
                   ],
                 ),
                 onTap: () {
+                  var newProjectProvider = Get.put(NewProjectGetxProvider());
+
+                  newProjectProvider.setName(project.name);
+                  newProjectProvider.setPath(project.path);
+                  newProjectProvider.setPlatform(project.platform.toString());
+                  newProjectProvider.setProjectType(
+                    project.projectType.toString(),
+                  );
+
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          ProjectScreen(projectModel: project),
-                    ),
+                    MaterialPageRoute(builder: (context) => ProjectScreen()),
                   );
                 },
               ),

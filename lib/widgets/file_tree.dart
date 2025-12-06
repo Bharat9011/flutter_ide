@@ -1,18 +1,21 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
+import 'package:get/get.dart';
+import 'package:laravelide/GetProvider/new_project_getx_provider.dart';
 import 'package:path/path.dart' as path;
 
 class FileTree extends StatefulWidget {
-  final String? projectPath;
+  // final String? projectPath;
   final void Function(String)? onFileSelected;
-  final List<String> excludedDirs;
+  // final List<String> excludedDirs;
 
   const FileTree({
     super.key,
-    this.projectPath,
+    // this.projectPath,
     this.onFileSelected,
-    this.excludedDirs = const [],
+    // this.excludedDirs = const [],
   });
 
   @override
@@ -21,71 +24,110 @@ class FileTree extends StatefulWidget {
 
 class _FileTreeState extends State<FileTree> {
   List<FileSystemEntity>? _rootContents;
-  bool _isLoading = true;
   String? _error;
   final ScrollController _verticalController = ScrollController();
   final ScrollController _horizontalController = ScrollController();
+
+  // File system watcher for auto-refresh
+  StreamSubscription<FileSystemEvent>? _watcher;
+  Timer? _debounceTimer;
 
   static String? clipboardPath;
 
   @override
   void initState() {
     super.initState();
+
+    final controller = Get.find<NewProjectGetxProvider>();
+
+    ever(controller.path, (_) {
+      _loadRootContents();
+      _setupFileWatcher();
+    });
+
     _loadRootContents();
+    _setupFileWatcher();
   }
 
   @override
   void dispose() {
+    _watcher?.cancel();
+    _debounceTimer?.cancel();
     _verticalController.dispose();
     _horizontalController.dispose();
     super.dispose();
   }
 
-  @override
-  void didUpdateWidget(FileTree oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.projectPath != widget.projectPath ||
-        oldWidget.excludedDirs != widget.excludedDirs) {
-      _loadRootContents();
+  void _setupFileWatcher() async {
+    await _watcher?.cancel();
+
+    final controller = Get.find<NewProjectGetxProvider>();
+    final projectPath = controller.path.value;
+
+    if (projectPath.isEmpty) return;
+
+    final dir = Directory(projectPath);
+    if (!dir.existsSync()) {
+      debugPrint('Directory does not exist for watcher: $projectPath');
+      return;
+    }
+
+    try {
+      _watcher = dir.watch(recursive: true).listen((event) {
+        // Debounce multiple rapid events
+        _debounceTimer?.cancel();
+        _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+          if (mounted) {
+            debugPrint('File system change detected: ${event.path}');
+            _loadRootContents();
+          }
+        });
+      });
+    } catch (e) {
+      debugPrint('Failed to setup file watcher: $e');
     }
   }
 
   Future<void> _loadRootContents() async {
-    if (widget.projectPath == null) {
+    final controller = Get.find<NewProjectGetxProvider>();
+    final projectPath = controller.path.value;
+
+    if (projectPath.isEmpty) {
       setState(() {
         _rootContents = null;
-        _isLoading = false;
+        _error = "No project path set";
       });
       return;
     }
 
-    final dir = Directory(widget.projectPath!);
+    final dir = Directory(projectPath);
+
     if (!dir.existsSync()) {
       setState(() {
-        _error = 'Project directory does not exist';
-        _isLoading = false;
+        _error = "Project directory does NOT exist:\n$projectPath";
       });
       return;
     }
 
     setState(() {
-      _isLoading = true;
       _error = null;
     });
 
     try {
-      final contents = await _getDirectoryContents(dir);
+      final checkFlutterProject = Directory(controller.path.value);
+
+      await Future.delayed(Duration(seconds: 3));
+      final contents = await _getDirectoryContents(checkFlutterProject);
+
       if (mounted) {
         setState(() {
           _rootContents = contents;
-          _isLoading = false;
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           _error = e.toString();
-          _isLoading = false;
         });
       }
     }
@@ -94,14 +136,6 @@ class _FileTreeState extends State<FileTree> {
   Future<List<FileSystemEntity>> _getDirectoryContents(Directory dir) async {
     try {
       final entities = await dir.list().where((entity) {
-        final name = path.basename(entity.path);
-
-        // Only skip explicitly excluded directories.
-        if (entity is Directory && widget.excludedDirs.contains(name)) {
-          return false;
-        }
-
-        // Show everything else, including dotfiles.
         return true;
       }).toList();
 
@@ -125,24 +159,11 @@ class _FileTreeState extends State<FileTree> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.projectPath == null) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.folder_open, size: 64, color: Colors.grey),
-            SizedBox(height: 16),
-            Text(
-              'No project opened',
-              style: TextStyle(color: Colors.grey, fontSize: 16),
-            ),
-          ],
-        ),
-      );
-    }
+    final controller = Get.find<NewProjectGetxProvider>();
+    final projectPath = controller.path.value;
 
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+    if (projectPath.isEmpty) {
+      return const Center(child: Text("No project opened"));
     }
 
     if (_error != null) {
@@ -160,7 +181,10 @@ class _FileTreeState extends State<FileTree> {
 
     if (_rootContents == null || _rootContents!.isEmpty) {
       return const Center(
-        child: Text('Folder is empty', style: TextStyle(color: Colors.grey)),
+        child: Text(
+          'Folder is empty, please wait...',
+          style: TextStyle(color: Colors.grey),
+        ),
       );
     }
 
@@ -188,7 +212,6 @@ class _FileTreeState extends State<FileTree> {
                     key: ValueKey(entity.path),
                     directory: entity,
                     onFileSelected: widget.onFileSelected,
-                    excludedDirs: widget.excludedDirs,
                   );
                 } else {
                   return _FileTile(
@@ -210,14 +233,12 @@ class _DirectoryTile extends StatefulWidget {
   final Directory directory;
   final int level;
   final void Function(String)? onFileSelected;
-  final List<String> excludedDirs;
 
   const _DirectoryTile({
     super.key,
     required this.directory,
     this.level = 0,
     this.onFileSelected,
-    required this.excludedDirs,
   });
 
   @override
@@ -227,43 +248,72 @@ class _DirectoryTile extends StatefulWidget {
 class _DirectoryTileState extends State<_DirectoryTile> {
   bool _isExpanded = false;
   List<FileSystemEntity>? _children;
-  bool _isLoading = false;
   String? _error;
-  String? _creatingType; // 'file' or 'folder'
+  String? _creatingType;
   final TextEditingController _createController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   bool _isHovered = false;
 
+  // File watcher for this directory
+  StreamSubscription<FileSystemEvent>? _dirWatcher;
+  Timer? _debounceTimer;
+
   @override
   void dispose() {
+    _dirWatcher?.cancel();
+    _debounceTimer?.cancel();
     _createController.dispose();
     _focusNode.dispose();
     super.dispose();
   }
 
+  void _setupDirectoryWatcher() async {
+    await _dirWatcher?.cancel();
+
+    if (!_isExpanded) return;
+
+    try {
+      _dirWatcher = widget.directory.watch(recursive: false).listen((event) {
+        _debounceTimer?.cancel();
+        _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+          if (mounted && _isExpanded) {
+            debugPrint('Directory change detected: ${event.path}');
+            _refresh();
+          }
+        });
+      });
+    } catch (e) {
+      debugPrint('Failed to watch directory: $e');
+    }
+  }
+
   Future<void> _toggleExpansion() async {
     if (!_isExpanded && _children == null) {
-      setState(() => _isLoading = true);
       try {
         final children = await _getDirectoryContents(widget.directory);
         if (mounted) {
           setState(() {
             _children = children;
             _isExpanded = true;
-            _isLoading = false;
             _error = null;
           });
+          _setupDirectoryWatcher();
         }
       } catch (e) {
         if (mounted) {
           setState(() {
             _error = e.toString();
-            _isLoading = false;
           });
         }
       }
     } else {
       setState(() => _isExpanded = !_isExpanded);
+      if (_isExpanded) {
+        _refresh(); // Refresh when expanding
+        _setupDirectoryWatcher();
+      } else {
+        await _dirWatcher?.cancel();
+      }
     }
   }
 
@@ -271,10 +321,9 @@ class _DirectoryTileState extends State<_DirectoryTile> {
     try {
       final entities = await dir.list().where((entity) {
         final name = path.basename(entity.path);
-        if (entity is Directory && widget.excludedDirs.contains(name)) {
-          return false;
-        }
-        // show everything else, including dotfiles
+        // if (entity is Directory && widget.excludedDirs.contains(name)) {
+        //   return false;
+        // }
         return true;
       }).toList();
 
@@ -351,7 +400,6 @@ class _DirectoryTileState extends State<_DirectoryTile> {
           await dir.delete(recursive: true);
           debugPrint('Deleted folder: ${dir.path}');
         }
-        // Let parent rebuild or just refresh this node
         _refresh();
         break;
     }
@@ -425,9 +473,7 @@ class _DirectoryTileState extends State<_DirectoryTile> {
   Widget build(BuildContext context) {
     final name = path.basename(widget.directory.path);
     final indent = widget.level * 16.0;
-    final hoverColor = Theme.of(
-      context,
-    ).hoverColor.withOpacity(0.2); // for rows
+    final hoverColor = Theme.of(context).hoverColor.withOpacity(0.2);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -462,21 +508,13 @@ class _DirectoryTileState extends State<_DirectoryTile> {
                     children: [
                       SizedBox(
                         width: 24,
-                        child: _isLoading
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : Icon(
-                                _isExpanded
-                                    ? Icons.keyboard_arrow_down
-                                    : Icons.keyboard_arrow_right,
-                                size: 20,
-                                color: Colors.grey[600],
-                              ),
+                        child: Icon(
+                          _isExpanded
+                              ? Icons.keyboard_arrow_down
+                              : Icons.keyboard_arrow_right,
+                          size: 20,
+                          color: Colors.grey[600],
+                        ),
                       ),
                       Icon(
                         _isExpanded ? Icons.folder_open : Icons.folder,
@@ -520,7 +558,6 @@ class _DirectoryTileState extends State<_DirectoryTile> {
                 directory: entity,
                 level: widget.level + 1,
                 onFileSelected: widget.onFileSelected,
-                excludedDirs: widget.excludedDirs,
               )
             else
               _FileTile(
@@ -585,11 +622,19 @@ class _FileTile extends StatefulWidget {
 class _FileTileState extends State<_FileTile> {
   bool _isHovered = false;
 
-  IconData _getFileIcon(String extension) {
+  IconData _getFileIcon(String extension, String fileName) {
+    if (fileName == 'pubspec.yaml') return Icons.inventory_2;
+    if (fileName == 'pubspec.lock') return Icons.lock;
+    if (fileName == 'analysis_options.yaml') return Icons.analytics;
+    if (fileName == '.gitignore') return Icons.remove_circle_outline;
+    if (fileName == 'README.md') return Icons.article;
+    if (fileName == '.env') return Icons.settings_applications;
+
     switch (extension.toLowerCase()) {
       case '.dart':
-        return Icons.code;
+        return Icons.flutter_dash;
       case '.json':
+        return Icons.data_object;
       case '.yaml':
       case '.yml':
         return Icons.settings;
@@ -598,32 +643,106 @@ class _FileTileState extends State<_FileTile> {
       case '.png':
       case '.jpg':
       case '.jpeg':
-      case '.gif':
-      case '.svg':
+      case '.webp':
         return Icons.image;
+      case '.gif':
+        return Icons.gif;
+      case '.svg':
+        return Icons.vignette;
       case '.txt':
         return Icons.text_snippet;
+      case '.xml':
+        return Icons.code;
+      case '.gradle':
+        return Icons.android;
+      case '.swift':
+      case '.m':
+      case '.h':
+        return Icons.apple;
+      case '.kt':
+      case '.java':
+        return Icons.code;
+      case '.html':
+        return Icons.html;
+      case '.css':
+        return Icons.css;
+      case '.js':
+        return Icons.javascript;
+      case '.ts':
+        return Icons.code;
+      case '.pdf':
+        return Icons.picture_as_pdf;
+      case '.zip':
+      case '.rar':
+      case '.7z':
+        return Icons.folder_zip;
+      case '.apk':
+        return Icons.android;
+      case '.ipa':
+        return Icons.phone_iphone;
+      case '.ttf':
+      case '.otf':
+        return Icons.font_download;
+      case '.mp3':
+      case '.wav':
+        return Icons.audio_file;
+      case '.mp4':
+      case '.mov':
+        return Icons.video_file;
       default:
         return Icons.insert_drive_file;
     }
   }
 
-  Color _getFileIconColor(String extension) {
+  Color _getFileIconColor(String extension, String fileName) {
+    // Special files
+    if (fileName == 'pubspec.yaml') return Colors.blue[700]!;
+    if (fileName == 'pubspec.lock') return Colors.grey[700]!;
+    if (fileName == 'analysis_options.yaml') return Colors.purple;
+    if (fileName == '.gitignore') return Colors.red[700]!;
+    if (fileName == 'README.md') return Colors.green[700]!;
+    if (fileName == '.env') return Colors.orange[700]!;
+
     switch (extension.toLowerCase()) {
       case '.dart':
-        return Colors.blue;
+        return const Color(0xFF00B4AB); // Dart/Flutter teal
       case '.json':
+        return Colors.yellow[700]!;
       case '.yaml':
       case '.yml':
-        return Colors.orange;
+        return Colors.orange[700]!;
       case '.md':
-        return Colors.grey;
+        return Colors.blue[700]!;
       case '.png':
       case '.jpg':
       case '.jpeg':
+      case '.webp':
+        return Colors.purple[400]!;
       case '.gif':
+        return Colors.pink;
       case '.svg':
-        return Colors.purple;
+        return Colors.orange;
+      case '.gradle':
+        return Colors.green[700]!;
+      case '.swift':
+      case '.m':
+      case '.h':
+        return Colors.orange[700]!;
+      case '.kt':
+      case '.java':
+        return Colors.blue[700]!;
+      case '.html':
+        return Colors.orange[700]!;
+      case '.css':
+        return Colors.blue;
+      case '.js':
+        return Colors.yellow[700]!;
+      case '.xml':
+        return Colors.green;
+      case '.apk':
+        return Colors.green[700]!;
+      case '.ipa':
+        return Colors.grey[700]!;
       default:
         return Colors.grey[600]!;
     }
@@ -667,7 +786,6 @@ class _FileTileState extends State<_FileTile> {
               ),
             );
             await target.writeAsBytes(await source.readAsBytes());
-            // No direct refresh here; the parent folder will re-read when toggled.
           } catch (e) {
             debugPrint('Paste failed: $e');
           }
@@ -677,7 +795,6 @@ class _FileTileState extends State<_FileTile> {
         try {
           await widget.file.delete(recursive: true);
           debugPrint('Deleted: ${widget.file.path}');
-          // Let parent directory refresh; locally we can just mark as deleted.
           if (mounted) setState(() {});
         } catch (e) {
           debugPrint('Delete failed: $e');
@@ -691,9 +808,7 @@ class _FileTileState extends State<_FileTile> {
     final name = path.basename(widget.file.path);
     final extension = path.extension(widget.file.path);
     final indent = widget.level * 16.0;
-    final hoverColor = Theme.of(
-      context,
-    ).hoverColor.withOpacity(0.2); // for rows
+    final hoverColor = Theme.of(context).hoverColor.withOpacity(0.2);
 
     return Listener(
       onPointerDown: (event) {
@@ -724,9 +839,9 @@ class _FileTileState extends State<_FileTile> {
               child: Row(
                 children: [
                   Icon(
-                    _getFileIcon(extension),
+                    _getFileIcon(extension, name),
                     size: 18,
-                    color: _getFileIconColor(extension),
+                    color: _getFileIconColor(extension, name),
                   ),
                   const SizedBox(width: 8),
                   Flexible(

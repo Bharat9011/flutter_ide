@@ -1,10 +1,9 @@
 import 'package:laravelide/services/flutter/os_support/os_utils_flutter.dart';
 
-class CreateProject {
+class CreateProjectUtils {
   static Future<void> createProjectStream({
     required String parentDir,
     required String projectName,
-    required String projectCmd,
     required Function(String) onLog,
     required Function() onComplete,
   }) async {

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:laravelide/models/project_model.dart';
+import 'package:get/get.dart';
+import 'package:laravelide/GetProvider/new_project_getx_provider.dart';
 import 'package:laravelide/widgets/menu_strip.dart';
 import 'package:window_size/window_size.dart';
 import '../widgets/file_tree.dart';
@@ -8,9 +9,7 @@ import '../widgets/code_editor.dart';
 import '../widgets/terminal_panel.dart';
 
 class ProjectScreen extends StatefulWidget {
-  final ProjectModel projectModel;
-
-  const ProjectScreen({super.key, required this.projectModel});
+  const ProjectScreen({super.key});
 
   @override
   State<ProjectScreen> createState() => _ProjectScreenState();
@@ -29,10 +28,13 @@ class _ProjectScreenState extends State<ProjectScreen> {
   bool _isResizingTerminal = false;
   bool _isTerminalVisible = true;
 
+  var newProjectController = Get.put(NewProjectGetxProvider());
+
   @override
   void initState() {
     super.initState();
-    _projectPath = widget.projectModel.path;
+
+    _projectPath = newProjectController.path.value;
     _initializeWindow();
   }
 
@@ -92,12 +94,6 @@ class _ProjectScreenState extends State<ProjectScreen> {
           _selectedFilePath = _openFiles[_currentFileIndex];
         }
       }
-    });
-  }
-
-  void _toggleTerminal() {
-    setState(() {
-      _isTerminalVisible = !_isTerminalVisible;
     });
   }
 
@@ -259,19 +255,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
                   child: SizedBox(
                     height: _terminalHeight,
                     child: TerminalPanel(
-                      projectPath: widget.projectModel.path,
-                      // workingDirectory: widget.projectModel.path,
-                      // onMinimize: _toggleTerminal,
-                      // onMaximize: () {
-                      //   setState(() {
-                      //     _terminalHeight = _terminalHeight < 400 ? 600 : 200;
-                      //   });
-                      // },
-                      // onClose: () {
-                      //   setState(() {
-                      //     _isTerminalVisible = false;
-                      //   });
-                      // },
+                      projectPath: newProjectController.path.value,
                     ),
                   ),
                 ),
@@ -334,7 +318,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
                       ),
                       Expanded(
                         child: FileTree(
-                          projectPath: _projectPath,
+                          // projectPath: _projectPath,
                           onFileSelected: _handleFileSelection,
                         ),
                       ),

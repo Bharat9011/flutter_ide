@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:laravelide/GetProvider/new_project_getx_provider.dart';
 import 'package:laravelide/widgets/terminal/terminal_cmd_debug.dart';
 import 'package:laravelide/widgets/terminal/terminal_cmd_output.dart';
 import 'package:laravelide/widgets/terminal/terminal_cmd_problem.dart';
@@ -24,6 +26,24 @@ class _TerminalPanelState extends State<TerminalPanel> {
       isSelectDebug = false,
       isSelectTerminal = false,
       isSelectOutput = false;
+
+  void checkNewProjectCreatedOrNot() {
+    var newProjectController = Get.put(NewProjectGetxProvider());
+
+    if (newProjectController.isCreated.value) {
+      terminalIndex = 2;
+      isSelectOutput = true;
+      isSelectDebug = false;
+      isSelectProblem = false;
+      isSelectTerminal = false;
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    checkNewProjectCreatedOrNot();
+  }
 
   @override
   Widget build(BuildContext context) {
