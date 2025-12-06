@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:get/get.dart';
+import 'package:laravelide/GetProvider/new_project_getx_provider.dart';
+import 'package:laravelide/db/data_base_handler.dart';
 import 'package:laravelide/models/project_model.dart';
 import 'package:laravelide/screens/project_screen.dart';
 
@@ -15,10 +18,8 @@ class _ProjectDialogState extends State<ProjectDialog> {
 
   String? _selectedFolderPath;
 
-  // Flutter vs Dart
   String _selectedPlatform = 'Flutter';
 
-  // Default types
   final List<String> _flutterTypes = const [
     'Flutter App',
     'Flutter Module',
@@ -172,7 +173,7 @@ class _ProjectDialogState extends State<ProjectDialog> {
           child: const Text('Cancel'),
         ),
         ElevatedButton(
-          onPressed: () {
+          onPressed: () async {
             final projectName = _projectNameController.text.trim();
             if (projectName.isEmpty ||
                 _selectedFolderPath == null ||
@@ -182,19 +183,30 @@ class _ProjectDialogState extends State<ProjectDialog> {
               );
               return;
             }
+
+            var newProjectController = Get.put(NewProjectGetxProvider());
+
+            newProjectController.setName(projectName);
+            newProjectController.setPath(
+              "${_selectedFolderPath.toString()}\\$projectName",
+            );
+            newProjectController.markCreated(true);
+            newProjectController.setPlatform(_selectedPlatform);
+            newProjectController.setProjectType(
+              _selectedProjectType.toString(),
+            );
+
+            await DataBaseHandler.instance.insertUser(
+              ProjectModel(
+                name: projectName,
+                path: "$_selectedFolderPath\\${_projectNameController.text}",
+                isCreated: "false",
+              ),
+            );
+
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (context) => ProjectScreen(
-                  projectModel: ProjectModel(
-                    name: projectName,
-                    path: _selectedFolderPath.toString(),
-                    isCreated: "true",
-                    platform: _selectedPlatform,
-                    projectType: _selectedProjectType!,
-                  ),
-                ),
-              ),
+              MaterialPageRoute(builder: (context) => ProjectScreen()),
             );
           },
           child: const Text('Create'),

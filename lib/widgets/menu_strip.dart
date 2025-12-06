@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:laravelide/GetProvider/new_project_getx_provider.dart';
+import 'package:laravelide/screens/home_screen.dart';
 
 class MenuStrip extends StatelessWidget {
   const MenuStrip({super.key});
@@ -15,23 +17,43 @@ class MenuStrip extends StatelessWidget {
                 color: Colors.grey[900],
                 child: Row(
                   children: [
-                    _menuButton(context, "File", [
-                      "New File",
-                      "Open File",
-                      "Save",
-                      "Exit",
-                    ]),
-                    _menuButton(context, "Edit", [
-                      "Undo",
-                      "Redo",
-                      "Copy",
-                      "Paste",
-                    ]),
-                    _menuButton(context, "View", [
-                      "Zoom In",
-                      "Zoom Out",
-                      "Full Screen",
-                    ]),
+                    _menuButton(
+                      context,
+                      "File",
+                      ["New File", "Open File", "Save", "Close Project"],
+                      (item) {
+                        if (item == "Close Project") {
+                          var newProjectController = NewProjectGetxProvider();
+
+                          newProjectController.reset();
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => HomeScreen(),
+                            ),
+                            (Route<dynamic> route) => route.isFirst,
+                          );
+                        }
+                      },
+                    ),
+
+                    _menuButton(
+                      context,
+                      "Edit",
+                      ["Undo", "Redo", "Copy", "Paste"],
+                      (item) {
+                        print("Edit → $item clicked");
+                      },
+                    ),
+
+                    _menuButton(
+                      context,
+                      "View",
+                      ["Zoom In", "Zoom Out", "Full Screen"],
+                      (item) {
+                        print("View → $item clicked");
+                      },
+                    ),
                   ],
                 ),
               ),
@@ -57,16 +79,26 @@ class MenuStrip extends StatelessWidget {
     );
   }
 
-  Widget _menuButton(BuildContext context, String title, List<String> items) {
-    return _DesktopMenuButton(title: title, items: items);
+  Widget _menuButton(
+    BuildContext context,
+    String title,
+    List<String> items,
+    Function(String item) onTap,
+  ) {
+    return _DesktopMenuButton(title: title, items: items, onItemTap: onTap);
   }
 }
 
 class _DesktopMenuButton extends StatefulWidget {
   final String title;
   final List<String> items;
+  final Function(String) onItemTap;
 
-  const _DesktopMenuButton({required this.title, required this.items});
+  const _DesktopMenuButton({
+    required this.title,
+    required this.items,
+    required this.onItemTap,
+  });
 
   @override
   State<_DesktopMenuButton> createState() => _DesktopMenuButtonState();
@@ -95,6 +127,7 @@ class _DesktopMenuButtonState extends State<_DesktopMenuButton> {
                 .map(
                   (e) => InkWell(
                     onTap: () {
+                      widget.onItemTap(e); // 🔥 CLICK EVENT HERE
                       MenuController.closeMenu();
                     },
                     child: Padding(
@@ -118,7 +151,6 @@ class _DesktopMenuButtonState extends State<_DesktopMenuButton> {
   Widget build(BuildContext context) {
     return MouseRegion(
       onEnter: (_) {
-        /// Hover should switch ONLY if already open
         if (MenuController.menuOpen.value &&
             MenuController.activeTitle != widget.title) {
           showMenu();
@@ -126,7 +158,6 @@ class _DesktopMenuButtonState extends State<_DesktopMenuButton> {
       },
       child: GestureDetector(
         onTap: () {
-          /// Click toggles the menu
           if (!MenuController.menuOpen.value) {
             showMenu();
           } else if (MenuController.activeTitle == widget.title) {

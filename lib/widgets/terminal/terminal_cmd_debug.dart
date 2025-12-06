@@ -17,14 +17,14 @@ class TerminalCmdDebug extends StatefulWidget {
 class _TerminalCmdDebugState extends State<TerminalCmdDebug> {
   final ScrollController _controller = ScrollController();
 
-  void _safeScrollToEnd() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_controller.hasClients) return;
-      try {
-        _controller.jumpTo(_controller.position.maxScrollExtent);
-      } catch (_) {}
-    });
-  }
+  // void _safeScrollToEnd() {
+  //   WidgetsBinding.instance.addPostFrameCallback((_) {
+  //     if (!_controller.hasClients) return;
+  //     try {
+  //       _controller.jumpTo(_controller.position.maxScrollExtent);
+  //     } catch (_) {}
+  //   });
+  // }
 
   List<TextSpan> _buildSpans(String text) {
     final ansiPattern = RegExp('\u001b\\[([\\d;]+)m');
@@ -95,62 +95,51 @@ class _TerminalCmdDebugState extends State<TerminalCmdDebug> {
     }
   }
 
-  void _runProject() {
-    TerminalLogStore.clear();
+  // void _runProject() {
+  //   TerminalLogStore.clear();
 
-    final unwantedPatterns = [
-      "Flutter run key commands.",
-      "r Hot reload.",
-      "R Hot restart.",
-      "h List all available interactive commands.",
-      "d Detach (terminate",
-      "c Clear the screen",
-      "q Quit (terminate",
-    ];
+  //   final unwantedPatterns = [
+  //     "Flutter run key commands.",
+  //     "r Hot reload.",
+  //     "R Hot restart.",
+  //     "h List all available interactive commands.",
+  //     "d Detach (terminate",
+  //     "c Clear the screen",
+  //     "q Quit (terminate",
+  //   ];
 
-    TerminalCmd.projectRunStream(
-      parentDir: widget.projectPath,
-      onLog: (line) {
-        // Remove flutter instruction lines
-        if (unwantedPatterns.any((p) => line.trim().startsWith(p))) {
-          return;
-        }
+  //   TerminalCmd.projectRunStream(
+  //     parentDir: widget.projectPath,
+  //     onLog: (line) {
+  //       if (unwantedPatterns.any((p) => line.trim().startsWith(p))) {
+  //         return;
+  //       }
 
-        TerminalLogStore.add(line);
-        if (mounted) setState(() {});
-        _safeScrollToEnd();
-      },
-      onComplete: () {},
-    );
-  }
+  //       TerminalLogStore.add(line);
+  //       if (mounted) setState(() {});
+  //       _safeScrollToEnd();
+  //     },
+  //     onComplete: () {},
+  //   );
+  // }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF1E1E1E),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(8),
-            child: ElevatedButton(
-              onPressed: _runProject,
-              child: const Text("Run Project"),
-            ),
-          ),
-          Expanded(
-            child: ListView.builder(
-              controller: _controller,
-              padding: const EdgeInsets.all(8),
-              itemCount: TerminalLogStore.logs.length,
-              itemBuilder: (context, index) {
-                return SelectableText.rich(
-                  TextSpan(children: _buildSpans(TerminalLogStore.logs[index])),
-                );
-              },
-            ),
-          ),
-        ],
+      body: Container(
+        color: Colors.black,
+        child: ListView.builder(
+          controller: _controller,
+          padding: const EdgeInsets.all(8),
+          shrinkWrap: true,
+          itemCount: TerminalLogStore.logs.length,
+          itemBuilder: (context, index) {
+            return SelectableText.rich(
+              TextSpan(children: _buildSpans(TerminalLogStore.logs[index])),
+            );
+          },
+        ),
       ),
     );
   }

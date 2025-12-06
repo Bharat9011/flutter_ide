@@ -341,6 +341,7 @@ class _TerminalCmdTerminalState extends State<TerminalCmdTerminal> {
         child: ListView.builder(
           controller: _scrollController,
           padding: const EdgeInsets.all(12),
+          shrinkWrap: true,
           itemCount: _lines.length,
           itemBuilder: (context, index) {
             final line = _lines[index];
