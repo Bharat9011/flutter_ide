@@ -1,4 +1,4 @@
-# laravelide
+# Flutteride
 
 A new Flutter project.
 
