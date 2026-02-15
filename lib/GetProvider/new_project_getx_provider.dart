@@ -1,4 +1,9 @@
+import 'dart:developer';
+
 import 'package:get/get.dart';
+import 'package:laravelide/GetProvider/debug_log_getx_controller.dart';
+import 'package:laravelide/GetProvider/is_completed_getx_provider.dart';
+import 'package:laravelide/services/flutter/create_project_utils.dart';
 
 class NewProjectGetxProvider extends GetxController {
   var name = "".obs;
@@ -7,23 +12,70 @@ class NewProjectGetxProvider extends GetxController {
   var platform = "".obs;
   var projectType = "".obs;
 
-  void setName(String value) => name.value = value;
+  @override
+  void onInit() {
+    super.onInit();
+    ever(isCreated, (bool value) {
+      if (value) _createProject();
+    });
+  }
 
-  void setPath(String value) => path.value = value;
+  void _createProject() {
+    if (path.value.isEmpty || name.value.isEmpty) {
+      return;
+    }
+    if (platform.value == "Flutter") {
+      if (projectType.value == "Flutter App") {
+        CreateProjectUtils.createProjectStream(
+          parentDir: path.value,
+          projectName: name.value,
+          onLog: (line) {
+            log(line);
+            Get.find<DebugLogGetxController>().addLog(line);
+            update();
+          },
+          onComplete: () {
+            Get.find<IsCompletedGetxProvider>().setCompleted(true);
+            markCreated(false);
+          },
+        );
+      }
+    }
+  }
 
-  void setPlatform(String value) => platform.value = value;
+  String get fullProjectPath => "$path\\$name";
 
-  void setProjectType(String value) => projectType.value = value;
+  void setName(String value) {
+    name.value = value;
+    update();
+  }
 
-  void markCreated(bool value) => isCreated.value = value;
+  void setPath(String value) {
+    path.value = value;
+    update();
+  }
 
-  String get fullProjectPath => "${path.value}\\${name.value}";
+  void setPlatform(String value) {
+    platform.value = value;
+    update();
+  }
+
+  void setProjectType(String value) {
+    projectType.value = value;
+    update();
+  }
+
+  void markCreated(bool value) {
+    isCreated.value = value;
+    update();
+  }
 
   void reset() {
     name.value = "";
-    path.value = "";
+    // path.value = "";
     isCreated.value = false;
     platform.value = "";
     projectType.value = "";
+    update();
   }
 }

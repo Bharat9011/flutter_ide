@@ -51,7 +51,7 @@ class _ProjectScreenState extends State<HomeScreen> {
       List<String> projectNameSplit = folderPath.toString().split("\\");
       String projectName = projectNameSplit[projectNameSplit.length - 1];
 
-      var newProjectController = Get.put(NewProjectGetxProvider());
+      var newProjectController = Get.find<NewProjectGetxProvider>();
 
       newProjectController.setName(projectName);
       newProjectController.setPath(folderPath.toString());
@@ -534,10 +534,17 @@ class _ProjectScreenState extends State<HomeScreen> {
                   ],
                 ),
                 onTap: () {
-                  var newProjectProvider = Get.put(NewProjectGetxProvider());
+                  var newProjectProvider = Get.find<NewProjectGetxProvider>();
+
+                  List<String> projectNameSplit = project.path.toString().split(
+                    "\\",
+                  );
+
+                  String projectPath =
+                      "${projectNameSplit[0]}\\${projectNameSplit[1]}";
 
                   newProjectProvider.setName(project.name);
-                  newProjectProvider.setPath(project.path);
+                  newProjectProvider.setPath(projectPath);
                   newProjectProvider.setPlatform(project.platform.toString());
                   newProjectProvider.setProjectType(
                     project.projectType.toString(),

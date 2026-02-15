@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:laravelide/GetProvider/is_run_getx_provider.dart';
 import 'package:laravelide/GetProvider/new_project_getx_provider.dart';
 import 'package:laravelide/widgets/terminal/terminal_cmd_debug.dart';
 import 'package:laravelide/widgets/terminal/terminal_cmd_output.dart';
@@ -18,6 +19,8 @@ class TerminalPanel extends StatefulWidget {
 class _TerminalPanelState extends State<TerminalPanel> {
   int terminalIndex = 0;
 
+  late Worker runWorker;
+
   bool isHoverProblem = false,
       isHoverDebug = false,
       isHoverTerminal = false,
@@ -27,22 +30,44 @@ class _TerminalPanelState extends State<TerminalPanel> {
       isSelectTerminal = false,
       isSelectOutput = false;
 
-  void checkNewProjectCreatedOrNot() {
-    var newProjectController = Get.put(NewProjectGetxProvider());
+  var newProjectController = Get.put(NewProjectGetxProvider());
 
+  void checkNewProjectCreatedOrNot() {
     if (newProjectController.isCreated.value) {
-      terminalIndex = 2;
+      terminalIndex = 1;
       isSelectOutput = true;
       isSelectDebug = false;
       isSelectProblem = false;
       isSelectTerminal = false;
     }
+    setState(() {});
   }
+
+  var isRunController = Get.find<IsRunGetxProvider>();
 
   @override
   void initState() {
     super.initState();
     checkNewProjectCreatedOrNot();
+
+    runWorker = ever(isRunController.isRun, (value) {
+      if (value) {
+        if (!mounted) return;
+        setState(() {
+          terminalIndex = 1;
+          isSelectDebug = true;
+          isSelectOutput = false;
+          isSelectProblem = false;
+          isSelectTerminal = false;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    runWorker.dispose();
+    super.dispose();
   }
 
   @override

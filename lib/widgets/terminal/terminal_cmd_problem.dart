@@ -32,10 +32,15 @@ class _TerminalCmdProblemState extends State<TerminalCmdProblem> {
   static const int _maxLogLines = 2000;
   static const int _maxIssues = 2000;
 
+  bool _hasStarted = false;
+
   @override
   void initState() {
     super.initState();
-    _startLogStream();
+    if (!_hasStarted) {
+      _hasStarted = true;
+      _startLogStream();
+    }
   }
 
   Future<void> _startLogStream() async {
@@ -154,67 +159,67 @@ class _TerminalCmdProblemState extends State<TerminalCmdProblem> {
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
-        child: ListView.builder(
-          itemCount: _groupedKeysSnapshot.length,
-          shrinkWrap: true,
-          itemBuilder: (context, index) {
-            final file = _groupedKeysSnapshot[index];
-            final filenameParts = file.split('/');
-            final fileIssues = _groupedIssues[file] ?? [];
-
-            if (_groupedKeysSnapshot.isEmpty) {
-              return Expanded(
-                child: Center(
-                  child: Text(
-                    'No problems found',
-                    style: const TextStyle(color: Colors.white70, fontSize: 16),
-                  ),
+        child: _isLoading
+            ? const Center(
+                child: CircularProgressIndicator(color: Colors.white),
+              )
+            : _groupedKeysSnapshot.isEmpty
+            ? const Center(
+                child: Text(
+                  'No problems found',
+                  style: TextStyle(color: Colors.white70, fontSize: 16),
                 ),
-              );
-            }
+              )
+            : ListView.builder(
+                itemCount: _groupedKeysSnapshot.length,
+                shrinkWrap: true,
+                itemBuilder: (context, index) {
+                  final file = _groupedKeysSnapshot[index];
+                  final filenameParts = file.split('/');
+                  final fileIssues = _groupedIssues[file] ?? [];
 
-            return Theme(
-              data: Theme.of(
-                context,
-              ).copyWith(dividerColor: Colors.grey.shade800),
-              child: ExpansionTile(
-                collapsedIconColor: Colors.white70,
-                initiallyExpanded: true,
-                iconColor: Colors.white,
-                title: Text(
-                  filenameParts.isNotEmpty ? filenameParts.last : file,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                children: fileIssues.map((issue) {
-                  return ListTile(
-                    leading: Icon(
-                      _getTypeIcon(issue.type),
-                      color: _getTypeColor(issue.type),
-                    ),
-                    title: Text(
-                      issue.message,
-                      style: TextStyle(
-                        color: _getTypeColor(issue.type),
-                        fontSize: 14,
+                  return Theme(
+                    data: Theme.of(
+                      context,
+                    ).copyWith(dividerColor: Colors.grey.shade800),
+                    child: ExpansionTile(
+                      collapsedIconColor: Colors.white70,
+                      initiallyExpanded: true,
+                      iconColor: Colors.white,
+                      title: Text(
+                        filenameParts.isNotEmpty ? filenameParts.last : file,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    subtitle: Text(
-                      'Line ${issue.line}, Column ${issue.column}',
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12,
-                      ),
+                      children: fileIssues.map((issue) {
+                        return ListTile(
+                          leading: Icon(
+                            _getTypeIcon(issue.type),
+                            color: _getTypeColor(issue.type),
+                          ),
+                          title: Text(
+                            issue.message,
+                            style: TextStyle(
+                              color: _getTypeColor(issue.type),
+                              fontSize: 14,
+                            ),
+                          ),
+                          subtitle: Text(
+                            'Line ${issue.line}, Column ${issue.column}',
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12,
+                            ),
+                          ),
+                        );
+                      }).toList(),
                     ),
                   );
-                }).toList(),
+                },
               ),
-            );
-          },
-        ),
       ),
     );
   }
