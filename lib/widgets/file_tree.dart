@@ -7,16 +7,9 @@ import 'package:laravelide/GetProvider/new_project_getx_provider.dart';
 import 'package:path/path.dart' as path;
 
 class FileTree extends StatefulWidget {
-  // final String? projectPath;
   final void Function(String)? onFileSelected;
-  // final List<String> excludedDirs;
 
-  const FileTree({
-    super.key,
-    // this.projectPath,
-    this.onFileSelected,
-    // this.excludedDirs = const [],
-  });
+  const FileTree({super.key, this.onFileSelected});
 
   @override
   State<FileTree> createState() => _FileTreeState();
@@ -28,7 +21,6 @@ class _FileTreeState extends State<FileTree> {
   final ScrollController _verticalController = ScrollController();
   final ScrollController _horizontalController = ScrollController();
 
-  // File system watcher for auto-refresh
   StreamSubscription<FileSystemEvent>? _watcher;
   Timer? _debounceTimer;
 
@@ -37,8 +29,6 @@ class _FileTreeState extends State<FileTree> {
   @override
   void initState() {
     super.initState();
-
-    final controller = Get.find<NewProjectGetxProvider>();
 
     ever(controller.path, (_) {
       _loadRootContents();
@@ -61,8 +51,7 @@ class _FileTreeState extends State<FileTree> {
   void _setupFileWatcher() async {
     await _watcher?.cancel();
 
-    final controller = Get.find<NewProjectGetxProvider>();
-    final projectPath = controller.path.value;
+    final projectPath = controller.fullProjectPath;
 
     if (projectPath.isEmpty) return;
 
@@ -88,11 +77,12 @@ class _FileTreeState extends State<FileTree> {
     }
   }
 
+  final controller = Get.find<NewProjectGetxProvider>();
   Future<void> _loadRootContents() async {
-    final controller = Get.find<NewProjectGetxProvider>();
-    final projectPath = controller.path.value;
+    final projectPath = controller.fullProjectPath;
 
     if (projectPath.isEmpty) {
+      if (!mounted) return;
       setState(() {
         _rootContents = null;
         _error = "No project path set";
@@ -100,36 +90,37 @@ class _FileTreeState extends State<FileTree> {
       return;
     }
 
+    // await Future.delayed(const Duration(seconds: 3));
+    if (!mounted) return;
+
     final dir = Directory(projectPath);
 
+    await dir.create(recursive: true);
+
     if (!dir.existsSync()) {
+      if (!mounted) return;
       setState(() {
         _error = "Project directory does NOT exist:\n$projectPath";
       });
       return;
     }
 
+    if (!mounted) return;
     setState(() {
       _error = null;
     });
 
     try {
-      final checkFlutterProject = Directory(controller.path.value);
-
-      await Future.delayed(Duration(seconds: 3));
-      final contents = await _getDirectoryContents(checkFlutterProject);
-
-      if (mounted) {
-        setState(() {
-          _rootContents = contents;
-        });
-      }
+      final contents = await _getDirectoryContents(dir);
+      if (!mounted) return;
+      setState(() {
+        _rootContents = contents;
+      });
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _error = e.toString();
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+      });
     }
   }
 
@@ -159,8 +150,7 @@ class _FileTreeState extends State<FileTree> {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.find<NewProjectGetxProvider>();
-    final projectPath = controller.path.value;
+    final projectPath = controller.fullProjectPath;
 
     if (projectPath.isEmpty) {
       return const Center(child: Text("No project opened"));
@@ -179,12 +169,13 @@ class _FileTreeState extends State<FileTree> {
       );
     }
 
-    if (_rootContents == null || _rootContents!.isEmpty) {
+    if (_rootContents == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_rootContents!.isEmpty) {
       return const Center(
-        child: Text(
-          'Folder is empty, please wait...',
-          style: TextStyle(color: Colors.grey),
-        ),
+        child: Text('Folder is empty', style: TextStyle(color: Colors.grey)),
       );
     }
 
@@ -254,7 +245,6 @@ class _DirectoryTileState extends State<_DirectoryTile> {
   final FocusNode _focusNode = FocusNode();
   bool _isHovered = false;
 
-  // File watcher for this directory
   StreamSubscription<FileSystemEvent>? _dirWatcher;
   Timer? _debounceTimer;
 

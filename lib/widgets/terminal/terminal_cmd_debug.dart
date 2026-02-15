@@ -1,11 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:laravelide/services/flutter/terminal_cmd.dart';
-
-class TerminalLogStore {
-  static final List<String> logs = [];
-  static void add(String msg) => logs.add(msg);
-  static void clear() => logs.clear();
-}
+import 'package:get/get.dart';
+import 'package:laravelide/GetProvider/debug_log_getx_controller.dart';
 
 class TerminalCmdDebug extends StatefulWidget {
   final String projectPath;
@@ -17,21 +12,33 @@ class TerminalCmdDebug extends StatefulWidget {
 class _TerminalCmdDebugState extends State<TerminalCmdDebug> {
   final ScrollController _controller = ScrollController();
 
-  // void _safeScrollToEnd() {
-  //   WidgetsBinding.instance.addPostFrameCallback((_) {
-  //     if (!_controller.hasClients) return;
-  //     try {
-  //       _controller.jumpTo(_controller.position.maxScrollExtent);
-  //     } catch (_) {}
-  //   });
-  // }
+  final log = Get.put(DebugLogGetxController());
+
+  void _safeScrollToEnd() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_controller.hasClients) return;
+      try {
+        _controller.jumpTo(_controller.position.maxScrollExtent);
+      } catch (_) {}
+    });
+  }
+
+  @override
+  void initState() {
+    _safeScrollToEnd();
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   List<TextSpan> _buildSpans(String text) {
     final ansiPattern = RegExp('\u001b\\[([\\d;]+)m');
-
     final spans = <TextSpan>[];
     int lastIndex = 0;
-
     TextStyle currentStyle = const TextStyle(
       color: Color(0xFFCCCCCC),
       fontFamily: 'monospace',
@@ -47,7 +54,6 @@ class _TerminalCmdDebugState extends State<TerminalCmdDebug> {
           ),
         );
       }
-
       final codeString = match.group(1);
       if (codeString != null) {
         final codes = codeString.split(';').map(int.tryParse);
@@ -57,14 +63,11 @@ class _TerminalCmdDebugState extends State<TerminalCmdDebug> {
           }
         }
       }
-
       lastIndex = match.end;
     }
-
     if (lastIndex < text.length) {
       spans.add(TextSpan(text: text.substring(lastIndex), style: currentStyle));
     }
-
     return spans;
   }
 
@@ -95,51 +98,30 @@ class _TerminalCmdDebugState extends State<TerminalCmdDebug> {
     }
   }
 
-  // void _runProject() {
-  //   TerminalLogStore.clear();
-
-  //   final unwantedPatterns = [
-  //     "Flutter run key commands.",
-  //     "r Hot reload.",
-  //     "R Hot restart.",
-  //     "h List all available interactive commands.",
-  //     "d Detach (terminate",
-  //     "c Clear the screen",
-  //     "q Quit (terminate",
-  //   ];
-
-  //   TerminalCmd.projectRunStream(
-  //     parentDir: widget.projectPath,
-  //     onLog: (line) {
-  //       if (unwantedPatterns.any((p) => line.trim().startsWith(p))) {
-  //         return;
-  //       }
-
-  //       TerminalLogStore.add(line);
-  //       if (mounted) setState(() {});
-  //       _safeScrollToEnd();
-  //     },
-  //     onComplete: () {},
-  //   );
-  // }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF1E1E1E),
       body: Container(
+        width: double.infinity,
+        height: double.infinity,
         color: Colors.black,
-        child: ListView.builder(
-          controller: _controller,
-          padding: const EdgeInsets.all(8),
-          shrinkWrap: true,
-          itemCount: TerminalLogStore.logs.length,
-          itemBuilder: (context, index) {
-            return SelectableText.rich(
-              TextSpan(children: _buildSpans(TerminalLogStore.logs[index])),
-            );
-          },
-        ),
+
+        child: Obx(() {
+          return SelectionArea(
+            child: ListView.builder(
+              controller: _controller,
+              padding: const EdgeInsets.all(8),
+              shrinkWrap: false,
+              itemCount: log.debugLogs.length,
+              itemBuilder: (context, index) {
+                return Text.rich(
+                  TextSpan(children: _buildSpans(log.debugLogs[index])),
+                );
+              },
+            ),
+          );
+        }),
       ),
     );
   }

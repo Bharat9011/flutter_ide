@@ -1,80 +1,139 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:laravelide/GetProvider/debug_log_getx_controller.dart';
+import 'package:laravelide/GetProvider/is_completed_getx_provider.dart';
+import 'package:laravelide/GetProvider/is_run_getx_provider.dart';
 import 'package:laravelide/GetProvider/new_project_getx_provider.dart';
 import 'package:laravelide/screens/home_screen.dart';
+import 'dart:developer';
 
 class MenuStrip extends StatelessWidget {
   const MenuStrip({super.key});
 
+  Widget _runButton() {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: () {
+          var runProject = Get.find<IsRunGetxProvider>();
+          runProject.isRun.value = true;
+        },
+        child: Row(
+          children: [
+            Container(
+              margin: const EdgeInsets.only(right: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.green[600],
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.play_arrow, color: Colors.white, size: 20),
+                  SizedBox(width: 4),
+                  Text(
+                    "Run",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          Column(
-            children: [
-              Container(
-                height: 40,
-                color: Colors.grey[900],
-                child: Row(
-                  children: [
-                    _menuButton(
-                      context,
-                      "File",
-                      ["New File", "Open File", "Save", "Close Project"],
-                      (item) {
-                        if (item == "Close Project") {
-                          var newProjectController = NewProjectGetxProvider();
+      body: Container(
+        height: 40,
+        color: Colors.grey[900],
+        child: Stack(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      _menuButton(
+                        context,
+                        "File",
+                        ["New File", "Open File", "Save", "Close Project"],
+                        (item) {
+                          if (item == "Close Project") {
+                            var newProjectController =
+                                Get.find<NewProjectGetxProvider>();
+                            var debugLogGetxController =
+                                Get.find<DebugLogGetxController>();
+                            var isCompletedGetxController =
+                                Get.find<IsCompletedGetxProvider>();
+                            var isRunGetxController =
+                                Get.find<IsRunGetxProvider>();
 
-                          newProjectController.reset();
-                          Navigator.pushAndRemoveUntil(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => HomeScreen(),
-                            ),
-                            (Route<dynamic> route) => route.isFirst,
-                          );
-                        }
-                      },
-                    ),
+                            newProjectController.reset();
+                            debugLogGetxController.clear();
+                            isCompletedGetxController.setCompleted(false);
+                            isRunGetxController.reset();
 
-                    _menuButton(
-                      context,
-                      "Edit",
-                      ["Undo", "Redo", "Copy", "Paste"],
-                      (item) {
-                        print("Edit → $item clicked");
-                      },
-                    ),
+                            Navigator.pushAndRemoveUntil(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => HomeScreen(),
+                              ),
+                              (Route<dynamic> route) => false,
+                            );
+                          }
+                        },
+                      ),
 
-                    _menuButton(
-                      context,
-                      "View",
-                      ["Zoom In", "Zoom Out", "Full Screen"],
-                      (item) {
-                        print("View → $item clicked");
-                      },
-                    ),
-                  ],
+                      _menuButton(
+                        context,
+                        "Edit",
+                        ["Undo", "Redo", "Copy", "Paste"],
+                        (item) {
+                          print("Edit → $item clicked");
+                        },
+                      ),
+
+                      _menuButton(
+                        context,
+                        "View",
+                        ["Zoom In", "Zoom Out", "Full Screen"],
+                        (item) {
+                          print("View → $item clicked");
+                        },
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
 
-          /// CLICK OUTSIDE TO CLOSE
-          ValueListenableBuilder<bool>(
-            valueListenable: MenuController.menuOpen,
-            builder: (_, open, __) {
-              if (!open) return SizedBox.shrink();
+                Spacer(),
 
-              return Positioned.fill(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.translucent,
-                  onTap: () => MenuController.closeMenu(),
-                ),
-              );
-            },
-          ),
-        ],
+                _runButton(),
+                Spacer(),
+              ],
+            ),
+
+            ValueListenableBuilder<bool>(
+              valueListenable: MenuController.menuOpen,
+              builder: (_, open, __) {
+                if (!open) return SizedBox.shrink();
+
+                return Positioned.fill(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    onTap: () => MenuController.closeMenu(),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -127,8 +186,12 @@ class _DesktopMenuButtonState extends State<_DesktopMenuButton> {
                 .map(
                   (e) => InkWell(
                     onTap: () {
-                      widget.onItemTap(e); // 🔥 CLICK EVENT HERE
-                      MenuController.closeMenu();
+                      try {
+                        widget.onItemTap(e);
+                        MenuController.closeMenu();
+                      } catch (e) {
+                        log(e.toString());
+                      }
                     },
                     child: Padding(
                       padding: const EdgeInsets.all(10),
