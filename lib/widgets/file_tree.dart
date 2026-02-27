@@ -90,7 +90,6 @@ class _FileTreeState extends State<FileTree> {
       return;
     }
 
-    // await Future.delayed(const Duration(seconds: 3));
     if (!mounted) return;
 
     final dir = Directory(projectPath);
@@ -109,6 +108,7 @@ class _FileTreeState extends State<FileTree> {
     setState(() {
       _error = null;
     });
+    await Future.delayed(const Duration(seconds: 3));
 
     try {
       final contents = await _getDirectoryContents(dir);
