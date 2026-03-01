@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:terminal_process/terminal_process_export.dart';
 
 class TerminalCmdTerminal extends StatefulWidget {
   final String projectPath;
@@ -105,6 +106,11 @@ class _TerminalCmdTerminalState extends State<TerminalCmdTerminal> {
   }
 
   Future<void> _runCommand(_TerminalLine line, String cmd) async {
+    TerminalProcess process = TerminalProcess(
+      cmd: cmd,
+      currentDirectory: _currentDirectory,
+    );
+
     if (_isRunning) return;
 
     final command = cmd.trim();
@@ -136,15 +142,24 @@ class _TerminalCmdTerminalState extends State<TerminalCmdTerminal> {
         return;
       }
 
-      if (command.startsWith("cd")) {
-        await _changeDirectory(line, command);
+      // if (command.startsWith("cd")) {
+      var result = await process.process();
+      if (result != null) {
+        _currentDirectory = result;
+        TerminalCmdTerminal._lastDirectory = result;
       } else {
-        await _executeCommand(
-          line,
-          command,
-          isFlutterCommand: isFlutterCommand,
+        line.addOutput(
+          "The system cannot find the path specified.",
+          LineType.error,
         );
       }
+      // } else {
+      //   await _executeCommand(
+      //     line,
+      //     command,
+      //     isFlutterCommand: isFlutterCommand,
+      //   );
+      // }
     } catch (e) {
       line.addOutput("Error: $e", LineType.error);
     }
@@ -152,38 +167,6 @@ class _TerminalCmdTerminalState extends State<TerminalCmdTerminal> {
     _isRunning = false;
     _syncHistory();
     _addPrompt();
-  }
-
-  Future<void> _changeDirectory(_TerminalLine line, String cmd) async {
-    final parts = cmd.split(RegExp(r"\s+"));
-    if (parts.length == 1) {
-      line.addOutput(_currentDirectory, LineType.info);
-      _syncHistory();
-      return;
-    }
-
-    String path = parts.sublist(1).join(" ").trim();
-
-    if (path == "..") {
-      path = Directory(_currentDirectory).parent.path;
-    } else if (!path.contains(":") && !path.startsWith("/")) {
-      path = "$_currentDirectory${Platform.pathSeparator}$path";
-    }
-
-    final dir = Directory(path);
-
-    if (await dir.exists()) {
-      _currentDirectory = dir.path;
-      TerminalCmdTerminal._lastDirectory = _currentDirectory;
-      line.addOutput("Directory changed: $_currentDirectory", LineType.info);
-    } else {
-      line.addOutput(
-        "The system cannot find the path specified.",
-        LineType.error,
-      );
-    }
-
-    _syncHistory();
   }
 
   void _showLoading(_TerminalLine line) {
