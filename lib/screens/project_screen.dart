@@ -1,11 +1,11 @@
 import 'dart:io';
+import 'package:code_editor/code_editors/code_editor.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:laravelide/GetProvider/new_project_getx_provider.dart';
 import 'package:laravelide/widgets/menu_strip.dart';
 import 'package:window_size/window_size.dart';
-import '../widgets/file_tree.dart';
-import '../widgets/code_editor.dart';
+import 'package:file_tree/file_tree/file_tree.dart';
 import '../widgets/terminal_panel.dart';
 
 class ProjectScreen extends StatefulWidget {
@@ -34,7 +34,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
   void initState() {
     super.initState();
 
-    _projectPath = newProjectController.path.value;
+    _projectPath = newProjectController.fullProjectPath;
     _initializeWindow();
   }
 
@@ -255,7 +255,9 @@ class _ProjectScreenState extends State<ProjectScreen> {
                   child: SizedBox(
                     height: _terminalHeight,
                     child: TerminalPanel(
-                      projectPath: newProjectController.path.value,
+                      projectPath: newProjectController.isCreated.value
+                          ? newProjectController.path.value
+                          : newProjectController.fullProjectPath,
                     ),
                   ),
                 ),
@@ -318,7 +320,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
                       ),
                       Expanded(
                         child: FileTree(
-                          // projectPath: _projectPath,
+                          folderPath: _projectPath,
                           onFileSelected: _handleFileSelection,
                         ),
                       ),

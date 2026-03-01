@@ -2,14 +2,13 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
-import 'package:get/get.dart';
-import 'package:laravelide/GetProvider/new_project_getx_provider.dart';
 import 'package:path/path.dart' as path;
 
 class FileTree extends StatefulWidget {
   final void Function(String)? onFileSelected;
 
-  const FileTree({super.key, this.onFileSelected});
+  FileTree({super.key, required this.onFileSelected, required this.folderPath});
+  String folderPath;
 
   @override
   State<FileTree> createState() => _FileTreeState();
@@ -30,11 +29,6 @@ class _FileTreeState extends State<FileTree> {
   void initState() {
     super.initState();
 
-    ever(controller.path, (_) {
-      _loadRootContents();
-      _setupFileWatcher();
-    });
-
     _loadRootContents();
     _setupFileWatcher();
   }
@@ -51,7 +45,7 @@ class _FileTreeState extends State<FileTree> {
   void _setupFileWatcher() async {
     await _watcher?.cancel();
 
-    final projectPath = controller.fullProjectPath;
+    final projectPath = widget.folderPath;
 
     if (projectPath.isEmpty) return;
 
@@ -77,9 +71,9 @@ class _FileTreeState extends State<FileTree> {
     }
   }
 
-  final controller = Get.find<NewProjectGetxProvider>();
+  // final controller = Get.find<NewProjectGetxProvider>();
   Future<void> _loadRootContents() async {
-    final projectPath = controller.fullProjectPath;
+    final projectPath = widget.folderPath;
 
     if (projectPath.isEmpty) {
       if (!mounted) return;
@@ -150,7 +144,7 @@ class _FileTreeState extends State<FileTree> {
 
   @override
   Widget build(BuildContext context) {
-    final projectPath = controller.fullProjectPath;
+    final projectPath = widget.folderPath;
 
     if (projectPath.isEmpty) {
       return const Center(child: Text("No project opened"));
